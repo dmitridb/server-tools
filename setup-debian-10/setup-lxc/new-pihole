@@ -1,0 +1,77 @@
+#!/usr/bin/perl -W
+use strict;
+
+my $mynet='NETWORK';
+my $myif='lxc-bridge-nat';
+my $mytype='macvlan';
+my $mymode='bridge';
+my @ips=['zero','bridge'];
+local *DB;
+
+# if($#ARGV < 0){ print "Usage: $0 <containername>\n"; exit(1); }
+if(-e "/var/lib/lxc/ips"){
+    open(DB,"/var/lib/lxc/ips");
+    while(defined(my $ip=<DB>)){
+        print "$ip";
+        my @TMP=split(/,/,$ip);
+        @TMP=split(/\./,$TMP[0]);
+        $ips[$TMP[3]]='taken';
+    }
+    close(DB);
+}
+my $nextip=2; 
+while(defined($ips[$nextip])){
+        $nextip++;
+}
+if($nextip>254){
+	print "More than 254 IPs in use, script assumes class-c, sorry\n"; exit(1); 
+}
+print "Next free IP: $mynet.$nextip\n";
+if(-e "/var/lib/lxc/pihole"){ print "Container pihole already exists.\n"; exit(1); }
+print "Creating rootfs, this may take a while!! - Get some coffee!\n";
+`lxc-create -n pihole -t debian -- -r jessie`;
+print "Writing network config\n";
+open(DB, ">> /var/lib/lxc/pihole/config");
+print DB "lxc.net.0.type = veth
+lxc.net.0.flags = up
+lxc.net.0.type = $mytype
+lxc.net.0.macvlan.mode = $mymode
+lxc.net.0.link = $myif
+lxc.net.0.name = eth0
+lxc.net.0.ipv4.address = $mynet.$nextip/24
+lxc.net.0.ipv4.gateway = $mynet.1
+";
+close(DB);
+open(DB, "> /var/lib/lxc/pihole/rootfs/etc/network/interfaces");
+print DB "
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+        address $mynet.$nextip
+        netmask 255.255.255.0
+        gateway $mynet.1
+";
+close(DB);
+`echo nameserver $mynet.1 > /var/lib/lxc/pihole/rootfs/etc/resolv.conf`;
+`echo $mynet.$nextip,pihole >> /var/lib/lxc/ips`;
+#print "Removing Systemd\n";
+#`lxc-start -d -n pihole`;
+#`lxc-attach -n pihole -- apt-get update`;
+#`lxc-attach -n pihole -- apt-get -y install sysvinit-core`;
+#`lxc-attach -n pihole --  cp /usr/share/sysvinit/inittab /etc/inittab`;
+#`lxc-stop -n pihole`;
+#`lxc-start -d -n pihole`;
+#`lxc-attach -n pihole -- apt-get -y remove --purge --auto-remove systemd*`;
+#print "Make sure it gets not reinstalled\n";
+#`echo 'Package: systemd\nPin: release *\nPin-Priority: -1' > /var/lib/lxc/pihole/rootfs/etc/apt/preferences.d/systemd`;
+print "Do you want to start this one at system boot? [y|N]:\n";
+my $input = <STDIN>;
+chomp $input;
+if($input eq 'y'){
+        print "Setting autostart for container\n";
+        `echo lxc.start.auto = 1 >> /var/lib/lxc/pihole/config`;
+}
+print "Add done. You can attach to pihole with 'lxc-attach -n pihole' now. Internal IP: $mynet.$nextip\n";
+exit(0);
