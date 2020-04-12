@@ -36,6 +36,7 @@ lxc.net.0.link = $myif
 lxc.net.0.name = eth0
 lxc.net.0.ipv4.address = $mynet.$nextip/24
 lxc.net.0.ipv4.gateway = $mynet.1
+lxc.include = /usr/share/lxc/config/debian.common.conf
 ";
 close(DB);
 open(DB, "> /var/lib/lxc/$ARGV[0]/rootfs/etc/network/interfaces");

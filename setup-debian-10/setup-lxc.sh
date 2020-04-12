@@ -4,8 +4,8 @@ if [ $# != 1 ]; then
 	exit 1
 fi
 if [ `whoami` != "root" ]; then
-        echo "This script must be run as root"
-        exit 1
+    echo "This script must be run as root"
+    exit 1
 fi
 source tools.sh
 if ! valid_ip $1; then 
@@ -38,11 +38,14 @@ iface lxc-bridge-nat inet static
 EOF
 ifup lxc-bridge-nat
 echo "Installing /usr/local/sbin/new-container"
-cat setup-lxc/new-container |sed "s/NETWORK/${NETWORK[0]}\.${NETWORK[1]}\.${NETWORK[2]}/" > /usr/local/sbin/new-container
+cat setup-lxc/new-container | sed "s/NETWORK/${NETWORK[0]}\.${NETWORK[1]}\.${NETWORK[2]}/" > /usr/local/sbin/new-container
+chmod 755 /usr/local/sbin/new-container
 # TODO: This
 #echo "Installing /usr/local/sbin/new-pihole"
 #cat setup-lxc/new-container |sed "s/NETWORK/${NETWORK[0]}\.${NETWORK[1]}\.${NETWORK[2]}/" > /usr/local/sbin/new-pihole
-chmod 755 /usr/local/sbin/new-container
+echo "Installing /usr/local/sbin/destroy-container"
+cp setup-lxc/new-container /usr/local/sbin/new-container
+chmod 755 /usr/local/sbin/destroy-container
 #chmod 755 /usr/local/sbin/new-pihole
 echo "Enabling ip-forwarding"
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
