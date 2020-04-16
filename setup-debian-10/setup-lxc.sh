@@ -44,17 +44,22 @@ chmod 755 /usr/local/sbin/new-container
 #echo "Installing /usr/local/sbin/new-pihole"
 #cat setup-lxc/new-container |sed "s/NETWORK/${NETWORK[0]}\.${NETWORK[1]}\.${NETWORK[2]}/" > /usr/local/sbin/new-pihole
 echo "Installing /usr/local/sbin/destroy-container"
-cp setup-lxc/new-container /usr/local/sbin/new-container
+cp setup-lxc/destroy-container /usr/local/sbin
 chmod 755 /usr/local/sbin/destroy-container
 #chmod 755 /usr/local/sbin/new-pihole
 echo "Enabling ip-forwarding"
 echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
 sysctl -p
 echo "Use new-container command to setup a new debian-scretch container"
-cp /etc/dnsmasq.conf /etc/dnsmasq.conf.bak
+if [ -f /etc/dnsmasq.conf ]; then
+  cp /etc/dnsmasq.conf /etc/dnsmasq.conf.bak
+fi
 cat << EOF > /etc/dnsmasq.conf
 interface=lxc-bridge-nat
 no-dhcp-interface=lxc-bridge-nat
 bind-interfaces
 EOF
-/etc/init.d/dnsmasq restart
+# TODO: Add determination whether host machine is your laptop on systemd or server on sysvinit
+# /etc/init.d/dnsmasq restart
+service dnsmasq restart
+echo "dnsmasq installed, script complete"

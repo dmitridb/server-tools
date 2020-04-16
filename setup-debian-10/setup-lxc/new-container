@@ -6,7 +6,10 @@ my $myif='lxc-bridge-nat';
 my @ips=['zero','bridge'];
 local *DB;
 
-if($#ARGV < 0){ print "Usage: $0 <containername>\n"; exit(1); }
+if($#ARGV != 3){
+    print "Usage: $0 <distro> <version> <containername>\n";
+    exit(1);
+}
 if(-e "/var/lib/lxc/ips"){
     open(DB,"/var/lib/lxc/ips");
     while(defined(my $ip=<DB>)){
@@ -25,11 +28,11 @@ if($nextip>254){
 	print "More than 254 IPs in use, script assumes class-c, sorry\n"; exit(1); 
 }
 print "Next free IP: $mynet.$nextip\n";
-if(-e "/var/lib/lxc/$ARGV[0]"){ print "Container $ARGV[0] already exists.\n"; exit(1); }
+if(-e "/var/lib/lxc/$ARGV[2]"){ print "Container $ARGV[2] already exists.\n"; exit(1); }
 print "Creating rootfs, this may take a while!! - Get some coffee!\n";
-`lxc-create -n $ARGV[0] -t debian -- -r buster`;
+`lxc-create -n $ARGV[2] -t $ARGV[0] -- -r $ARGV[1]`;
 print "Writing network config\n";
-open(DB, ">> /var/lib/lxc/$ARGV[0]/config");
+open(DB, ">> /var/lib/lxc/$ARGV[2]/config");
 print DB "lxc.net.0.type = veth
 lxc.net.0.flags = up
 lxc.net.0.link = $myif
@@ -39,7 +42,7 @@ lxc.net.0.ipv4.gateway = $mynet.1
 lxc.include = /usr/share/lxc/config/debian.common.conf
 ";
 close(DB);
-open(DB, "> /var/lib/lxc/$ARGV[0]/rootfs/etc/network/interfaces");
+open(DB, "> /var/lib/lxc/$ARGV[2]/rootfs/etc/network/interfaces");
 print DB "
 auto lo
 iface lo inet loopback
@@ -51,25 +54,25 @@ iface eth0 inet static
         gateway $mynet.1
 ";
 close(DB);
-`echo nameserver $mynet.1 > /var/lib/lxc/$ARGV[0]/rootfs/etc/resolv.conf`;
-`echo $mynet.$nextip,$ARGV[0] >> /var/lib/lxc/ips`;
+`echo nameserver $mynet.1 > /var/lib/lxc/$ARGV[2]/rootfs/etc/resolv.conf`;
+`echo $mynet.$nextip,$ARGV[2] >> /var/lib/lxc/ips`;
 print "Removing Systemd\n";
-`lxc-start -d -n $ARGV[0]`;
-`lxc-attach -n $ARGV[0] -- /usr/bin/apt-get update`;
-`lxc-attach -n $ARGV[0] -- /usr/bin/apt-get install -y --no-install-recommends apt-utils`;
-`lxc-attach -n $ARGV[0] -- /usr/bin/apt-get -y install sysvinit-core`;
-`lxc-attach -n $ARGV[0] -- /usr/bin/cp /usr/share/sysvinit/inittab /etc/inittab`;
-`lxc-stop -n $ARGV[0]`;
-`lxc-start -d -n $ARGV[0]`;
-`lxc-attach -n $ARGV[0] -- /usr/bin/apt-get -y remove --purge --auto-remove systemd*`;
+`lxc-start -d -n $ARGV[2]`;
+`lxc-attach -n $ARGV[2] -- /usr/bin/apt-get update`;
+`lxc-attach -n $ARGV[2] -- /usr/bin/apt-get install -y --no-install-recommends apt-utils`;
+`lxc-attach -n $ARGV[2] -- /usr/bin/apt-get -y install sysvinit-core`;
+`lxc-attach -n $ARGV[2] -- /usr/bin/cp /usr/share/sysvinit/inittab /etc/inittab`;
+`lxc-stop -n $ARGV[2]`;
+`lxc-start -d -n $ARGV[2]`;
+`lxc-attach -n $ARGV[2] -- /usr/bin/apt-get -y remove --purge --auto-remove systemd*`;
 print "Make sure it gets not reinstalled\n";
-`echo 'Package: systemd\nPin: release *\nPin-Priority: -1' > /var/lib/lxc/$ARGV[0]/rootfs/etc/apt/preferences.d/systemd`;
+`echo 'Package: systemd\nPin: release *\nPin-Priority: -1' > /var/lib/lxc/$ARGV[2]/rootfs/etc/apt/preferences.d/systemd`;
 print "Do you want to start this one at system boot? [y|N]:\n";
 my $input = <STDIN>;
 chomp $input;
 if($input eq 'y'){
     print "Setting autostart for container\n";
-    `echo lxc.start.auto = 1 >> /var/lib/lxc/$ARGV[0]/config`;
+    `echo lxc.start.auto = 1 >> /var/lib/lxc/$ARGV[2]/config`;
 }
-print "Add done. You can attach to $ARGV[0] with 'lxc-attach -n $ARGV[0]' now. Internal IP: $mynet.$nextip\n";
+print "Add done. You can attach to $ARGV[2] with 'lxc-attach -n $ARGV[2]' now. Internal IP: $mynet.$nextip\n";
 exit(0);
