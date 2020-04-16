@@ -6,7 +6,7 @@ my $myif='lxc-bridge-nat';
 my @ips=['zero','bridge'];
 local *DB;
 
-if($#ARGV != 3){
+if($#ARGV != 2){
     print "Usage: $0 <distro> <version> <containername>\n";
     exit(1);
 }
