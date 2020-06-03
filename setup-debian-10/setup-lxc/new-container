@@ -10,6 +10,13 @@ if($#ARGV != 2){
     print "Usage: $0 <distro> <version> <containername>\n";
     exit(1);
 }
+# BIG NASTY PROBLEM HERE!!!
+# If you go and remove a container, this algorithm for finding a new IP starts
+# going and fucking up hard. It'll start taking IPs that are alerady allocated
+# to other containers. So if you go and remove 10.0.0.2, but still have containers
+# allocated to 10.0.0.3 and/or 10.0.0.4, it'll re-allocate one at .2 but 
+# then start fucking up the ones at .3 and .4 -- You need to figure out the perl
+# to get this fixed
 if(-e "/var/lib/lxc/ips"){
     open(DB,"/var/lib/lxc/ips");
     while(defined(my $ip=<DB>)){
