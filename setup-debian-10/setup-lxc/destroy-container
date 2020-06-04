@@ -12,6 +12,6 @@ lxc-stop -n $1
 echo "Destroying container $1..."
 lxc-destroy -n $1
 echo "Removing IP address of container $1 from /var/lib/lxc/ips..."
-# sed with < > to match $1 exactly...
-sed '/,\<$1\>/d' /var/lib/lxc/ips > /var/lib/lxc/ips
+# sed with < >\n to match $1 exactly with a line break...
+sed '/,\<$1\>\n/d' /var/lib/lxc/ips > /var/lib/lxc/ips
 echo "Successfully removed container $1"

@@ -53,7 +53,10 @@ if($nextip>254){
 }
 print "Next free IP: $mynet.$nextip\n";
 if(-e "/var/lib/lxc/$ARGV[2]"){ print "Container $ARGV[2] already exists.\n"; exit(1); }
-print "Creating rootfs, this may take a while!! - Get some coffee!\n";
+if not( -e "/var/lib/lxc/ips"){
+	print "Creating lxc rootfs for first time, will take some time...\n";
+}
+print "Creating new container $ARGV[2] with OS $ARGV[1] $ARGV[0]:";
 `lxc-create -n $ARGV[2] -t $ARGV[0] -- -r $ARGV[1]`;
 print "Writing network config\n";
 open(DB, ">> /var/lib/lxc/$ARGV[2]/config");
