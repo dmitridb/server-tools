@@ -12,6 +12,8 @@ lxc-stop -n $1
 echo "Destroying container $1..."
 lxc-destroy -n $1
 echo "Removing IP address of container $1 from /var/lib/lxc/ips..."
-# sed with <,$1>$ to match $1 exactly with a line break at sed regex $ so we don't delete other shit...
-sed "/\<,$1\>$/d" /var/lib/lxc/ips > /var/lib/lxc/ips
+# sed with <,$1>$ to match $1 exactly with a line break at sed regex $
+# (so we don't delete other shit) into into new file, move new file into old
+sed "/,\<$1\>$/d" /var/lib/lxc/ips > /var/lib/lxc/new_ips
+mv /var/lib/lxc/new_ips /var/lib/lxc/ips
 echo "Successfully removed container $1"
