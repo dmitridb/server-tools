@@ -3,6 +3,7 @@ use strict;
 
 my $mynet='NETWORK';
 my $myif='lxc-bridge-nat';
+# 
 my @ips=['zero','bridge'];
 local *DB;
 
@@ -15,20 +16,36 @@ if($#ARGV != 2){
 # going and fucking up hard. It'll start taking IPs that are alerady allocated
 # to other containers. So if you go and remove 10.0.0.2, but still have containers
 # allocated to 10.0.0.3 and/or 10.0.0.4, it'll re-allocate one at .2 but 
-# then start fucking up the ones at .3 and .4 -- You need to figure out the perl
-# to get this fixed
+# then start fucking up the ones at .3 and .4 on further runs of new-container -- 
+# You need to figure out the perl to get this fixed
 if(-e "/var/lib/lxc/ips"){
+    # open the contents of this file into local DB
     open(DB,"/var/lib/lxc/ips");
+    # defined evaluetes a boolean value telling whether EXPR has a value other than undef.
+    # so <> is readline in perl... meaning if my ip = readline(db) is the evaluation here
     while(defined(my $ip=<DB>)){
+        # print the ip address line
         print "$ip";
+        # temporary value = split the expression $ip into a list of strings and return the
+        # list in list context, split on commas
+        # 10.0.19.2,container for example gets split into a array looking like (ip,container)
         my @TMP=split(/,/,$ip);
+        # Further split the first result out by extracting the IP address and putting that
+        # into a list
         @TMP=split(/\./,$TMP[0]);
+        # We then assign the string value 'taken' to the 4th/last number in our ip ($TMP[3])
         $ips[$TMP[3]]='taken';
     }
     close(DB);
 }
+# Starts IP allocation values off at 2 (For example 10.0.0.2)
 my $nextip=2; 
+# While the list of ips == nextip
 while(defined($ips[$nextip])){
+    # Add one to this nextip value. Herein lies the bug we're facing. The issue happens
+    # to be that we're not properly checking if that value is truly in use or not, and if
+    # we run destroy-container on this shit, it ends in disaster because we don't have
+    # any way to accomodate for this change in this part of the script.
     $nextip++;
 }
 if($nextip>254){
@@ -40,6 +57,7 @@ print "Creating rootfs, this may take a while!! - Get some coffee!\n";
 `lxc-create -n $ARGV[2] -t $ARGV[0] -- -r $ARGV[1]`;
 print "Writing network config\n";
 open(DB, ">> /var/lib/lxc/$ARGV[2]/config");
+# here we echo into an lxc config value a bunch of shit, crucially the nextip gets inserted here
 print DB "lxc.net.0.type = veth
 lxc.net.0.flags = up
 lxc.net.0.link = $myif
